@@ -10,7 +10,7 @@ services:
       - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
-
+  
   client1:
     container_name: client1
     image: client:latest
