@@ -148,3 +148,6 @@ python3 create_docker_compose.py <n_clients>
 `n_clients` es la cantidad de clientes que se desea definir.
 
 La ejecución del script sobreescribe el archivo `docker-compose-dev.yaml` o lo crea si no existe.
+
+## Ejercicio N°2:
+Se definieron volúmenes de tipo `bind` en `docker-compose-dev.yaml` para montar los archivos `client/config.yaml` y `server/config.ini` en sus respectivos containers. Además se modificó el `Dockerfile` del client y se agregó el archivo `.dockerignore` para evitar copiar los archivos de config durante el build.

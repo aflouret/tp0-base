@@ -21,6 +21,10 @@ for i in range(1, n_clients+1):
       - testing_net
     depends_on:
       - server
+    volumes:
+      - type: bind
+        source: ./client/config.yaml
+        target: /config.yaml
 '''
    
 file_content = f'''version: '3.9'
@@ -35,6 +39,10 @@ services:
       - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
+    volumes:
+      - type: bind
+        source: ./server/config.ini
+        target: /config.ini
   {clients_string}
 networks:
   testing_net:
