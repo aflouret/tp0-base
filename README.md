@@ -133,3 +133,18 @@ La Parte 2 requiere una sección donde se explique el protocolo de comunicación
 La Parte 3 requiere una sección que expliquen los mecanismos de sincronización utilizados.
 
 Finalmente, se pide a los alumnos leer atentamente y **tener en cuenta** los criterios de corrección provistos [en el campus](https://campusgrado.fi.uba.ar/mod/page/view.php?id=73393).
+
+# Soluciones
+
+## Ejercicio N°1.1:
+Para resolver este ejercicio se agregó el script de python `create_docker_compose.py`. 
+
+Ejecutar el siguiente comando en el directorio root del proyecto: 
+
+```
+python3 create_docker_compose.py <n_clients>
+```
+
+`n_clients` es la cantidad de clientes que se desea definir.
+
+La ejecución del script sobreescribe el archivo `docker-compose-dev.yaml` o lo crea si no existe.
