@@ -47,6 +47,14 @@ services:
         source: ./client/config.yaml
         target: /config.yaml
 
+  netcat-test:
+    container_name: netcat-test
+    build: ./netcat-test
+    networks:
+      - testing_net
+    depends_on:
+      - server
+
 networks:
   testing_net:
     ipam:

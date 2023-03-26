@@ -1,0 +1,1 @@
+ echo -n "Message received from server: "; echo "[NETCAT-TEST] Hello World" | nc server 12345

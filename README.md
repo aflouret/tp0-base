@@ -151,3 +151,7 @@ La ejecución del script sobreescribe el archivo `docker-compose-dev.yaml` o lo 
 
 ## Ejercicio N°2:
 Se definieron volúmenes de tipo `bind` en `docker-compose-dev.yaml` para montar los archivos `client/config.yaml` y `server/config.ini` en sus respectivos containers. Además se modificó el `Dockerfile` del client y se agregó el archivo `.dockerignore` para evitar copiar los archivos de config durante el build.
+
+## Ejercicio N°3:
+Se agregó al docker-compose un container que corre el script `netcat-test.sh`, que envía el mensaje `"[NETCAT-TEST] Hello World"` al server a través de `netcat`. 
+Con todos los containers en ejecución, se puede observar con `make docker-compose-logs` que el servidor recibe el mensaje y luego el cliente de netcat recibe el mismo mensaje del servidor.

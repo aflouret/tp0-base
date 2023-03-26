@@ -44,6 +44,14 @@ services:
         source: ./server/config.ini
         target: /config.ini
   {clients_string}
+  netcat-test:
+    container_name: netcat-test
+    build: ./netcat-test
+    networks:
+      - testing_net
+    depends_on:
+      - server
+
 networks:
   testing_net:
     ipam:
