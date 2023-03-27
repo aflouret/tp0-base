@@ -155,3 +155,6 @@ Se definieron volúmenes de tipo `bind` en `docker-compose-dev.yaml` para montar
 ## Ejercicio N°3:
 Se agregó al docker-compose un container que corre el script `netcat-test.sh`, que envía el mensaje `"[NETCAT-TEST] Hello World"` al server a través de `netcat`. 
 Con todos los containers en ejecución, se puede observar con `make docker-compose-logs` que el servidor recibe el mensaje y luego el cliente de netcat recibe el mismo mensaje del servidor.
+
+## Ejercicio N°4:
+Se modificó el cliente y el servidor para handlear la señal SIGTERM. Para verificar que los programas terminan de forma gracefully, ejecutar `docker compose -f docker-compose-dev.yaml stop` y observar en los logs el cierre de los recursos.
