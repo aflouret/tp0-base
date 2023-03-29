@@ -2,6 +2,7 @@ package common
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"os"
@@ -51,60 +52,62 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-// StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
-	// autoincremental msgID to identify every message sent
-	msgID := 1
+// StartClient Sends a bet to the server
+func (c *Client) StartClient() {
 	sigtermNotifier := make(chan os.Signal, 1)
 	signal.Notify(sigtermNotifier, syscall.SIGTERM)
 
-loop:
-	// Send messages if the loopLapse threshold has not been surpassed
-	for timeout := time.After(c.config.LoopLapse); ; {
-		select {
-		case <-timeout:
-			log.Infof("action: timeout_detected | result: success | client_id: %v",
-				c.config.ID,
-			)
-			break loop
-		default:
-		}
+	c.createClientSocket()
 
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
+	bet := getBetFromEnv(c.config.ID)
 
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		msgID++
-		c.conn.Close()
-
-		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			return
-		}
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-			c.config.ID,
-			msg,
-		)
-
-		// Wait a time between sending one message and the next one
-		sleep := time.After(c.config.LoopPeriod)
-		select {
-		case <-sigtermNotifier:
-			log.Infof("action: terminate_client | result: success | client_id: %v", c.config.ID)
-			return
-		case <-sleep:
-		}
+	err := c.sendBet(bet)
+	if err != nil {
+		log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
+	} else {
+		log.Infof("action: send_bet | result: success | dni: %v | number: %v", bet.Document, bet.Number)
 	}
 
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	c.conn.Close()
+
+	select {
+	case <-sigtermNotifier:
+		log.Debugf("action: terminate_client | result: success | client_id: %v", c.config.ID)
+		return
+	default:
+	}
+
+	log.Debugf("action: exit_client | result: success | client_id: %v", c.config.ID)
+}
+
+func (c *Client) sendBet(bet Bet) error {
+
+	length, bytes, err := bet.serialize()
+	if err != nil {
+		return err
+	}
+
+	err = binary.Write(c.conn, binary.BigEndian, uint16(length))
+	if err != nil {
+		return err
+	}
+
+	totalSent := 0
+	for totalSent < length {
+		sent, err := c.conn.Write(bytes[totalSent:])
+		if err != nil {
+			return err
+		}
+		totalSent += sent
+	}
+
+	msg, err := bufio.NewReader(c.conn).ReadString('\n')
+	if err != nil {
+		return err
+	}
+	if msg != "OK\n" {
+		return fmt.Errorf("received response from server: %v", msg)
+	}
+
+	return nil
 }

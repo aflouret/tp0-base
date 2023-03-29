@@ -7,7 +7,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
     networks:
       - testing_net
     volumes:
@@ -21,7 +21,12 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=1
-      - CLI_LOG_LEVEL=DEBUG
+      - CLI_LOG_LEVEL=INFO
+      - NOMBRE=Santiago Lionel
+      - APELLIDO=Lorca
+      - DOCUMENTO=30904465
+      - NACIMIENTO=1999-03-17
+      - NUMERO=2201
     networks:
       - testing_net
     depends_on:
@@ -37,7 +42,12 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=2
-      - CLI_LOG_LEVEL=DEBUG
+      - CLI_LOG_LEVEL=INFO
+      - NOMBRE=Agustin Emanuel
+      - APELLIDO=Zambrano
+      - DOCUMENTO=21689196
+      - NACIMIENTO=2000-05-10
+      - NUMERO=9325
     networks:
       - testing_net
     depends_on:
@@ -47,13 +57,68 @@ services:
         source: ./client/config.yaml
         target: /config.yaml
 
-  netcat-test:
-    container_name: netcat-test
-    build: ./netcat-test
+  client3:
+    container_name: client3
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=3
+      - CLI_LOG_LEVEL=INFO
+      - NOMBRE=Tiago Nicolás
+      - APELLIDO=Rivera
+      - DOCUMENTO=34407251
+      - NACIMIENTO=2001-08-29
+      - NUMERO=1033
     networks:
       - testing_net
     depends_on:
       - server
+    volumes:
+      - type: bind
+        source: ./client/config.yaml
+        target: /config.yaml
+
+  client4:
+    container_name: client4
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=4
+      - CLI_LOG_LEVEL=INFO
+      - NOMBRE=Camila Rocio
+      - APELLIDO=Varela
+      - DOCUMENTO=37130775
+      - NACIMIENTO=1995-05-09
+      - NUMERO=4179
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - type: bind
+        source: ./client/config.yaml
+        target: /config.yaml
+
+  client5:
+    container_name: client5
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=5
+      - CLI_LOG_LEVEL=INFO
+      - NOMBRE=Diego Agustin
+      - APELLIDO=Mamani
+      - DOCUMENTO=33259835
+      - NACIMIENTO=1991-01-08
+      - NUMERO=1931
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - type: bind
+        source: ./client/config.yaml
+        target: /config.yaml
 
 networks:
   testing_net:

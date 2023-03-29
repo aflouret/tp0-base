@@ -1,6 +1,8 @@
 import socket
 import logging
 import signal
+import json
+from common import utils
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -36,14 +38,13 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            bet = self.__receive_bet(client_sock)
+            utils.store_bets([bet])
+            logging.info(f'action: store_bet | result: success | dni: {bet.document} | number: {bet.number}')
+            self.__send_response(client_sock, "OK")
+
         except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            logging.error("action: receive_bet | result: fail | error: {e}")
         finally:
             client_sock.close()
 
@@ -56,11 +57,44 @@ class Server:
         """
 
         # Connection arrived
-        logging.info('action: accept_connections | result: in_progress')
+        logging.debug('action: accept_connections | result: in_progress')
         c, addr = self._server_socket.accept()
-        logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
+        logging.debug(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
 
     def __handle_sigterm(self, _a, _b):
         self._server_socket.close()
-        logging.info('action: close_server_socket | result: success')
+        logging.debug('action: close_server_socket | result: success')
+
+    def __receive_bet(self, client_sock) -> utils.Bet:
+        total_length = client_sock.recv(2)
+        total_length = int.from_bytes(total_length, "big")
+
+        buffer = b''
+        while len(buffer) < total_length:
+            data = client_sock.recv(total_length - len(buffer))
+            buffer += data
+
+        json_bet = json.loads(buffer.decode("utf-8"))
+        addr = client_sock.getpeername()
+
+        logging.debug(f'action: receive_bet | result: success | ip: {addr[0]} | msg: {json_bet}')
+
+        return utils.Bet(
+            agency=json_bet["agency"],
+            first_name=json_bet["first_name"],
+            last_name=json_bet["last_name"],
+            document=json_bet["document"],
+            birthdate=json_bet["birthdate"],
+            number=json_bet["number"],
+        )
+
+    def __send_response(self, client_sock, message):
+        message += "\n"
+        data = message.encode('utf-8')
+        total_sent = 0
+        while total_sent < len(data):
+            sent = client_sock.send(data)
+            total_sent += sent
+        logging.debug(f'action: send_response | result: success | msg: "OK"')
+
