@@ -194,3 +194,12 @@ Se modificó el protocolo teniendo en cuenta los casos del sorteo y la consulta 
   - Si la respuesta es 0, significa que todavía no se realizó el sorteo, por lo que todavía no están disponibles los ganadores. En este caso, el cliente cierra la conexión, espera un tiempo configurable y reinicia la conexión, repitiendo el paso anterior.
   - Si la respuesta es 1 es porque el sorteo ya se realizó. El cliente envía su ID al servidor en un entero de 2 bytes y se prepara para recibir la lista de ganadores correspondientes a su agencia, en formato CSV. 
 - Una vez que el cliente recibe los ganadores, cierra la conexión y finaliza la ejecución del cliente.
+
+## Ejercicio N°8:
+En este ejercicio se agregó multithreading al servidor para aceptar conexiones y procesar mensajes en paralelo. Por cada conexión entrante el servidor crea un thread, en el cual se realiza toda la comunicación con el cliente y el procesamiento de las apuestas.
+
+En este caso los recursos compartidos entre los threads son:
+- el archivo donde se almacenan las apuestas 
+- las variables globales `agencies_stored` y `lottery_draw_done`
+
+Para sincronizar el acceso a estos recursos los threads deberán adquirir dos locks de tipo `threading.Lock`: `file_lock` para escribir el archivo y `lottery_draw_lock` para acceder a las variables globales. De esta manera se garantiza que solo un thread a la vez podrá tener acceso a los mismos.
