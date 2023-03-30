@@ -77,9 +77,9 @@ class Server:
                 break
             utils.store_bets(bets)
             agency = bets[0].agency
-            self._agencies_stored.append(agency)
             self.__send_response(client_sock, BATCH_OK_RESPONSE)
         logging.info(f'action: store_bets | result: success | agency: {agency}')
+        self._agencies_stored.append(agency)
         self.__lottery_draw()
 
     def __lottery_draw(self):
