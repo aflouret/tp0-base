@@ -6,3 +6,5 @@ loop:
   period: "5s"
 log:
   level: "info"
+batch:
+  size: 50

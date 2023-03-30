@@ -16,7 +16,7 @@ for i in range(1, n_clients+1):
     entrypoint: /client
     environment:
       - CLI_ID={i}
-      - CLI_LOG_LEVEL=DEBUG
+      - CLI_LOG_LEVEL=INFO
     networks:
       - testing_net
     depends_on:
@@ -25,6 +25,9 @@ for i in range(1, n_clients+1):
       - type: bind
         source: ./client/config.yaml
         target: /config.yaml
+      - type: bind
+        source: ./.data/dataset/agency-{i}.csv
+        target: /agency-{i}.csv
 '''
    
 file_content = f'''version: '3.9'
@@ -36,7 +39,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
+      - LOGGING_LEVEL=INFO
     networks:
       - testing_net
     volumes:

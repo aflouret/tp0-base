@@ -23,7 +23,7 @@ class Server:
 
         while True:
             try:
-                client_sock = self.__accept_new_connection() 
+                client_sock = self.__accept_new_connection()
                 self.__handle_client_connection(client_sock)
             except OSError as e:
                 if e.errno == 9:  # Socket closed
@@ -38,13 +38,18 @@ class Server:
         client socket will also be closed
         """
         try:
-            bet = self.__receive_bet(client_sock)
-            utils.store_bets([bet])
-            logging.info(f'action: store_bet | result: success | dni: {bet.document} | number: {bet.number}')
-            self.__send_response(client_sock, "OK")
+            agency = 0
+            while True:
+                bets = self.__receive_batch(client_sock)
+                if len(bets) == 0:
+                    break
+                agency = bets[0].agency
+                utils.store_bets(bets)
+                self.__send_response(client_sock, "OK")
+            logging.info(f'action: store_bets | result: success | agency: {agency}')
 
         except OSError as e:
-            logging.error("action: receive_bet | result: fail | error: {e}")
+            logging.error("action: store_bets | result: fail | error: {e}")
         finally:
             client_sock.close()
 
@@ -66,28 +71,41 @@ class Server:
         self._server_socket.close()
         logging.debug('action: close_server_socket | result: success')
 
-    def __receive_bet(self, client_sock) -> utils.Bet:
+    def __receive_batch(self, client_sock) -> [utils.Bet]:
         total_length = client_sock.recv(2)
         total_length = int.from_bytes(total_length, "big")
+
+        logging.debug(f'action: receive_length | result: success | msg: {total_length}')
+
+        if total_length == 0:
+            return []
 
         buffer = b''
         while len(buffer) < total_length:
             data = client_sock.recv(total_length - len(buffer))
             buffer += data
 
-        json_bet = json.loads(buffer.decode("utf-8"))
+        s = buffer.decode("utf-8")
+        logging.debug(f'action: receive_string | result: success | msg: {s}')
+
+        json_batch = json.loads(s)
+        agency = json_batch["agency"]
+        bets = []
+        for json_bet in json_batch["bets"]:
+            bet = utils.Bet(
+                agency=agency,
+                first_name=json_bet["first_name"],
+                last_name=json_bet["last_name"],
+                document=json_bet["document"],
+                birthdate=json_bet["birthdate"],
+                number=json_bet["number"],
+            )
+            bets.append(bet)
+
         addr = client_sock.getpeername()
+        logging.debug(f'action: receive_batch | result: success | ip: {addr[0]} | msg: {json_batch}')
 
-        logging.debug(f'action: receive_bet | result: success | ip: {addr[0]} | msg: {json_bet}')
-
-        return utils.Bet(
-            agency=json_bet["agency"],
-            first_name=json_bet["first_name"],
-            last_name=json_bet["last_name"],
-            document=json_bet["document"],
-            birthdate=json_bet["birthdate"],
-            number=json_bet["number"],
-        )
+        return bets
 
     def __send_response(self, client_sock, message):
         message += "\n"

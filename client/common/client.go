@@ -3,6 +3,7 @@ package common
 import (
 	"bufio"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -19,6 +20,7 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
+	BatchSize     int
 }
 
 // Client Entity that encapsulates how
@@ -57,32 +59,47 @@ func (c *Client) StartClient() {
 	sigtermNotifier := make(chan os.Signal, 1)
 	signal.Notify(sigtermNotifier, syscall.SIGTERM)
 
-	c.createClientSocket()
-
-	bet := getBetFromEnv(c.config.ID)
-
-	err := c.sendBet(bet)
+	file, err := os.Open(fmt.Sprintf("agency-%v.csv", c.config.ID))
 	if err != nil {
-		log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
-	} else {
-		log.Infof("action: send_bet | result: success | dni: %v | number: %v", bet.Document, bet.Number)
+		log.Fatal(err)
 	}
+	defer file.Close()
 
-	c.conn.Close()
+	c.createClientSocket()
+	defer c.conn.Close()
 
-	select {
-	case <-sigtermNotifier:
-		log.Debugf("action: terminate_client | result: success | client_id: %v", c.config.ID)
-		return
-	default:
+	scanner := bufio.NewScanner(file)
+
+	for {
+		batch, err := readBatch(scanner, c.config.BatchSize)
+		if err != nil {
+			log.Errorf("action: send_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		}
+		if len(batch) == 0 {
+			log.Infof("action: send_bets | result: success | client_id: %v", c.config.ID)
+			break
+		}
+
+		err = c.sendBatch(batch)
+		if err != nil {
+			log.Errorf("action: send_bets | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			return
+		}
+
+		select {
+		case <-sigtermNotifier:
+			log.Debugf("action: terminate_client | result: success | client_id: %v", c.config.ID)
+			return
+		default:
+		}
+
 	}
-
 	log.Debugf("action: exit_client | result: success | client_id: %v", c.config.ID)
 }
 
-func (c *Client) sendBet(bet Bet) error {
+func (c *Client) sendBatch(bets []Bet) error {
 
-	length, bytes, err := bet.serialize()
+	length, bytes, err := serializeBatch(bets, c.config.ID)
 	if err != nil {
 		return err
 	}
@@ -110,4 +127,40 @@ func (c *Client) sendBet(bet Bet) error {
 	}
 
 	return nil
+}
+
+func readBatch(scanner *bufio.Scanner, size int) ([]Bet, error) {
+	var batch []Bet
+
+	for i := 0; i < size; i++ {
+		if scanner.Scan() {
+			bet := getBetFromCSV(scanner.Text())
+			batch = append(batch, bet)
+		} else {
+			break
+		}
+	}
+
+	return batch, scanner.Err()
+}
+
+func serializeBatch(bets []Bet, agency string) (int, []byte, error) {
+	batchJson := struct {
+		Agency string `json:"agency"`
+		Bets   []Bet  `json:"bets"`
+	}{
+		agency,
+		bets,
+	}
+
+	b, err := json.Marshal(batchJson)
+	if err != nil {
+		return 0, []byte{}, err
+	}
+	length := len(b)
+	if length > 8192 {
+		return 0, []byte{}, fmt.Errorf("data exceeds maximum length")
+	}
+
+	return length, b, nil
 }
