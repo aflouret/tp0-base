@@ -158,3 +158,27 @@ Con todos los containers en ejecución, se puede observar con `make docker-compo
 
 ## Ejercicio N°4:
 Se modificó el cliente y el servidor para handlear la señal SIGTERM. Para verificar que los programas terminan de forma gracefully, ejecutar `docker compose -f docker-compose-dev.yaml stop` y observar en los logs el cierre de los recursos.
+
+## Ejercicio N°5:
+Se modificó el cliente y el servidor para implementar el caso de uso de la lotería. En este caso hay 5 clientes, cada uno de los cuales representa una agencia, y el servidor actúa como la central de la lotería. El protocolo de comunicación que se implementó consiste en lo siguiente:
+
+### Cliente:
+- Al igual que en el echo server, cada cliente establece una conexión TCP con el servidor.
+- El cliente envía 2 bytes con la longitud del mensaje, que no debe ser mayor que 8kB.
+- El cliente envía la apuesta serializada en formato JSON.
+- El cliente espera la respuesta del servidor, que contiene el mensaje "OK\n"
+- Se cierra el socket para finalizar la conexión
+
+### Servidor:
+- El servidor recibe la longitud y luego lee esa cantidad de bytes del socket, obteniendo así la apuesta del cliente.
+- El servidor almacena la apuesta
+- El servidor envía el mensaje "OK\n" al servidor
+- Se cierra el socket para finalizar la conexión
+
+## Ejercicio N°6:
+En este caso se modificó la lógica del cliente y del servidor para enviar apuestas en modo batch.
+El protocolo es similar al anterior, con las siguientes diferencias:
+- En lugar de enviar una sola apuesta se envia un batch de apuestas, que se serializa como un arreglo de JSON. Al igual que en el caso anterior, antes de enviar el batch se envía la longitud en bytes del mismo.
+- El id de la agencia (campo `agency`) se envía una vez por batch, en vez de estar incluido en cada apuesta.
+- En una misma conexión TCP se envían todos los batches.
+- La cantidad de apuestas por batch se puede configurar en `config.yaml`, aunque hay que tener en cuenta que la cantidad de bytes no puede superar los 8kB.
