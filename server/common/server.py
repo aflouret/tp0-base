@@ -2,6 +2,7 @@ import socket
 import logging
 import signal
 import json
+import threading
 from common import utils
 
 BETS_REQUEST = 1
@@ -9,6 +10,10 @@ WINNERS_REQUEST = 2
 BATCH_OK_RESPONSE = "OK"
 WINNERS_OK_RESPONSE = 1
 WINNERS_NOT_OK_RESPONSE = 0
+
+lottery_draw_lock = threading.Lock()
+file_lock = threading.Lock()
+
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -28,15 +33,21 @@ class Server:
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
         """
-
+        threads = []
         while True:
             try:
                 client_sock = self.__accept_new_connection()
-                self.__handle_client_connection(client_sock)
+                thread = threading.Thread(target=self.__handle_client_connection, args=(client_sock,))
+                threads.append(thread)
+                thread.start()
             except OSError as e:
                 if e.errno == 9:  # Socket closed
                     break
                 raise
+        for thread in threads:
+            thread.join()
+        logging.info(f"action: graceful_exit | result: success")
+
 
     def __handle_client_connection(self, client_sock):
         try:
@@ -75,12 +86,15 @@ class Server:
             bets = self.__receive_batch(client_sock)
             if len(bets) == 0:
                 break
-            utils.store_bets(bets)
+            with file_lock:
+                utils.store_bets(bets)
             agency = bets[0].agency
-            self._agencies_stored.append(agency)
             self.__send_response(client_sock, BATCH_OK_RESPONSE)
+
         logging.info(f'action: store_bets | result: success | agency: {agency}')
-        self.__lottery_draw()
+        with lottery_draw_lock:
+            self._agencies_stored.append(agency)
+            self.__lottery_draw()
 
     def __lottery_draw(self):
         if self._lottery_draw_done:
@@ -92,10 +106,11 @@ class Server:
         logging.info(f'action: lottery_draw | result: success')
 
     def __handle_winners(self, client_sock):
-        if self._lottery_draw_done:
-            response = WINNERS_OK_RESPONSE
-        else:
-            response = WINNERS_NOT_OK_RESPONSE
+        with lottery_draw_lock:
+            if self._lottery_draw_done:
+                response = WINNERS_OK_RESPONSE
+            else:
+                response = WINNERS_NOT_OK_RESPONSE
 
         response = response.to_bytes(1, "big")
         client_sock.send(response)
