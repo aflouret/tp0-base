@@ -182,3 +182,15 @@ El protocolo es similar al anterior, con las siguientes diferencias:
 - El id de la agencia (campo `agency`) se envía una vez por batch, en vez de estar incluido en cada apuesta.
 - En una misma conexión TCP se envían todos los batches.
 - La cantidad de apuestas por batch se puede configurar en `config.yaml`, aunque hay que tener en cuenta que la cantidad de bytes no puede superar los 8kB.
+
+## Ejercicio N°7:
+Se modificó el protocolo teniendo en cuenta los casos del sorteo y la consulta de ganadores:
+- Luego de establecer la conexión TCP, el cliente envía un entero de 1 byte para indicar la operación a realizar:
+  - 1: Enviar apuestas
+  - 2: Consultar ganadores
+- En primer lugar, el cliente le indica al servidor que va a realizar la operación 1 y luego envía los batches de apuestas, siguiendo el mismo procedimiento que en el ejercicio 6.
+- El cliente cierra la conexión y abre una nueva, esta vez enviando el número 2 para avisarle al servidor que va a consultar los ganadores del sorteo.
+- El cliente espera una respuesta del servidor:
+  - Si la respuesta es 0, significa que todavía no se realizó el sorteo, por lo que todavía no están disponibles los ganadores. En este caso, el cliente cierra la conexión, espera un tiempo configurable y reinicia la conexión, repitiendo el paso anterior.
+  - Si la respuesta es 1 es porque el sorteo ya se realizó. El cliente envía su ID al servidor en un entero de 2 bytes y se prepara para recibir la lista de ganadores correspondientes a su agencia, en formato CSV. 
+- Una vez que el cliente recibe los ganadores, cierra la conexión y finaliza la ejecución del cliente.
