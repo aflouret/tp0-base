@@ -3,7 +3,6 @@ package common
 import (
 	"bufio"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -105,7 +104,7 @@ func (c *Client) sendBetsToServer() error {
 	scanner := bufio.NewScanner(file)
 
 	for {
-		batch, err := readBatch(scanner, c.config.BatchSize)
+		batch, err := c.readBatch(scanner)
 		if err != nil {
 			return err
 		}
@@ -196,7 +195,7 @@ func (c *Client) setupConnection(requestType int) error {
 
 func (c *Client) sendBatch(bets []Bet) error {
 
-	length, bytes, err := serializeBatch(bets, c.config.ID)
+	length, bytes, err := serializeBatch(bets)
 	if err != nil {
 		return err
 	}
@@ -226,12 +225,12 @@ func (c *Client) sendBatch(bets []Bet) error {
 	return nil
 }
 
-func readBatch(scanner *bufio.Scanner, size int) ([]Bet, error) {
+func (c *Client) readBatch(scanner *bufio.Scanner) ([]Bet, error) {
 	var batch []Bet
 
-	for i := 0; i < size; i++ {
+	for i := 0; i < c.config.BatchSize; i++ {
 		if scanner.Scan() {
-			bet := getBetFromCSV(scanner.Text())
+			bet := getBetFromCSV(scanner.Text(), c.config.ID)
 			batch = append(batch, bet)
 		} else {
 			break
@@ -241,23 +240,17 @@ func readBatch(scanner *bufio.Scanner, size int) ([]Bet, error) {
 	return batch, scanner.Err()
 }
 
-func serializeBatch(bets []Bet, agency string) (int, []byte, error) {
-	batchJson := struct {
-		Agency string `json:"agency"`
-		Bets   []Bet  `json:"bets"`
-	}{
-		agency,
-		bets,
+func serializeBatch(bets []Bet) (int, []byte, error) {
+	var batchCSV string
+	for _, bet := range bets {
+		batchCSV += bet.toCSV()
 	}
 
-	b, err := json.Marshal(batchJson)
-	if err != nil {
-		return 0, []byte{}, err
-	}
-	length := len(b)
+	bytes := []byte(batchCSV)
+	length := len(bytes)
 	if length > maxPacketLength {
 		return 0, []byte{}, fmt.Errorf("data exceeds maximum length")
 	}
 
-	return length, b, nil
+	return length, bytes, nil
 }

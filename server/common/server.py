@@ -1,7 +1,6 @@
 import socket
 import logging
 import signal
-import json
 import threading
 from common import utils
 
@@ -146,24 +145,28 @@ class Server:
             data = client_sock.recv(total_length - len(buffer))
             buffer += data
 
-        json_batch = json.loads(buffer.decode("utf-8"))
-        agency = json_batch["agency"]
-        bets = []
-        for json_bet in json_batch["bets"]:
-            bet = utils.Bet(
-                agency=agency,
-                first_name=json_bet["first_name"],
-                last_name=json_bet["last_name"],
-                document=json_bet["document"],
-                birthdate=json_bet["birthdate"],
-                number=json_bet["number"],
-            )
-            bets.append(bet)
+        csv_data = buffer.decode('utf-8')
+        bets = self.__bets_from_csv(csv_data)
 
-        addr = client_sock.getpeername()
-        # logging.debug(f'action: receive_batch | result: success | ip: {addr[0]} | msg: {json_batch}')
+        logging.debug(f'action: receive_batch | result: success | msg: {bets}')
 
         return bets
+
+    def __bets_from_csv(self, data: str) -> [utils.Bet]:
+        bets = []
+        for line in data.splitlines():
+            fields = line.split(',')
+            bet = utils.Bet(
+                agency=fields[0],
+                first_name=fields[1],
+                last_name=fields[2],
+                document=fields[3],
+                birthdate=fields[4],
+                number=fields[5],
+            )
+            bets.append(bet)
+        return bets
+
 
     def __send_response(self, client_sock, message):
         message += "\n"
